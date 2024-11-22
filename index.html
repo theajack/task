@@ -1,0 +1,53 @@
+<!--
+ * @Author: theajack
+ * @Date: 2023-04-04 23:20:27
+ * @Description: Coding something
+-->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TaskRunner</title>
+    <style>
+      @keyframes move {
+        /* 从0%开始，div在最左边（假设初始位置） */
+        0% {
+            left: 0;
+        }
+        /* 运动到50%的时候，div移动到右边一定距离 */
+        50% {
+            left: 200px;
+        }
+        /* 到100%又回到最左边，完成一次往复运动 */
+        100% {
+            left: 0;
+        }
+    }
+
+    /* 应用动画到指定的div元素 */
+    #box {
+        width: 20px;
+        height: 20px;
+        position: fixed;
+        background-color: red;
+        position: relative;
+        /* 应用名为move的动画，持续时间为5秒，无限次循环，并且运动方式为线性（匀速） */
+        animation: move 5s infinite linear;
+    }
+    </style>
+  </head>
+  <body>
+    <div id="box"></div>
+    <div style="margin-top: 10px;">
+      <button id="startTasks">Run sync tasks with `tc-task`</button>
+      <button id="startAsyncTasks">Run async tasks with `tc-task`</button>
+      <span style="font-size: 12px;">Control the maximum number of concurrent requests to 100</span>
+    </div>
+    <div style="margin-top: 10px;">
+      <button id="startTasks2">Run sync tasks without `tc-task`</button>
+    </div>
+    <div id="result" style="margin-top: 10px;"></div>
+    <script type="module" src="/dev/index.ts"></script>
+  </body>
+</html>

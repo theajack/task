@@ -1,0 +1,54 @@
+{
+    "name": "task",
+    "ebuild": {
+        "libName": "TaskRunner",
+        "fileName": "task-runner-lib",
+        "publish": {
+            "name": "task-runner-lib",
+            "version": "0.0.1",
+            "description": "A simple concurrent task execution library that supports both synchronous and asynchronous operations.",
+            "repository": {
+                "type": "git",
+                "url": "https://github.com/theajack/task"
+            },
+            "keywords": ["task-runner", "concurrent"],
+            "author": "theajack",
+            "license": "MIT",
+            "bugs": {
+                "url": "https://github.com/theajack/task/issues"
+            },
+            "homepage": "https://theajack.github.io/task",
+            "publishConfig": {
+                "registry": "https://registry.npmjs.org/",
+                "tag": "latest"
+            }
+        }
+    },
+    "private": true,
+    "version": "0.0.1",
+    "scripts": {
+        "dev": "vite --host",
+        "lint": "eslint --fix",
+        "build": "vite build -m=sdk",
+        "build:app": "vite build -m=app",
+        "preview": "vite preview"
+    },
+    "devDependencies": {
+        "@babel/preset-env": "^7.21.4",
+        "@rollup/plugin-babel": "^6.0.4",
+        "@types/node": "^22.2.0",
+        "@typescript-eslint/eslint-plugin": "^5.4.0",
+        "@typescript-eslint/parser": "^5.4.0",
+        "@vitejs/plugin-legacy": "^4.0.2",
+        "eslint": "^8.2.0",
+        "terser": "^5.16.8",
+        "typescript": "^4.9.3",
+        "typescript-eslint": "0.0.1-alpha.0",
+        "up-fs": "^0.0.1",
+        "vite": "^4.2.0",
+        "dts-bundle-generator": "^9.5.1"
+    },
+    "dependencies": {},
+    "description": "A Simple Task Runner",
+    "author": "theajack"
+}
