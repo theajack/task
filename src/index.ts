@@ -106,6 +106,65 @@ export function runTasks<T = any> (
     return ready;
 }
 
+const endMark = Symbol('');
+
+// 作用是确保同步和异步逻辑可以分别处理，如 writeFile和writeFileSync
+export function runTaskQueue<T = any> (
+    fns: ((prev: any, end: <T>(v?: T)=>T)=>any)[],
+): T|Promise<T> {
+
+    let isAsync = false;
+    let prev: any;
+    let resolve: (v: T)=>any;
+    let ready: Promise<T>;
+
+    let finish = false;
+
+    const end = (v: any) => {
+        finish = true;
+        prev = v;
+        return v;
+    };
+
+    const next = () => {
+        const fn = fns.shift();
+        if (!fn) return resolve?.(prev);
+
+        let result = fn(prev, end);
+
+        if (result?.[endMark]) {
+            result = result.value;
+            finish = true;
+        }
+
+        if (finish) return resolve?.(result);
+
+        const _next = (result: any) => {
+            prev = result;
+            next();
+        };
+        if (result instanceof Promise) {
+            if (!isAsync) {
+                isAsync = true;
+                const p = withResolve();
+                ready = p.ready;
+                resolve = p.resolve;
+            }
+            result.then(_next);
+        } else {
+            _next(result);
+        }
+    };
+    next();
+    // @ts-ignore
+    return isAsync ? ready : prev;
+}
+
+runTaskQueue.end = (value: any) => ({
+    [endMark]: true,
+    value,
+});
+
 export function withResolve<T=any> () {
     let resolve: (value?: T|PromiseLike<T>)=>any = () => {}, reject: (error?: any)=>any = () => {};
     const ready = new Promise<T>((_resolve, _reject) => {

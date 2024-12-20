@@ -25,6 +25,8 @@ or
 
 ### Usage
 
+runTasks
+
 ```js
 import {runTasks} from 'task-runner-lib';
 
@@ -45,6 +47,8 @@ function fib (n) {
     }
 }
 ```
+
+runAsyncTasks
 
 ```js
 import {runAsyncTasks, withResolve} from 'task-runner-lib';
@@ -70,6 +74,45 @@ function asyncTask () {
 
 ```
 
+runTaskQueue
+
+```js
+import {runAsyncTasks, withResolve} from 'task-runner-lib';
+
+function asyncFn () {
+    return Promise.resolve('asyncFn');
+}
+function syncFn () {
+    return 'syncFn';
+}
+
+async function testAsync () {
+    return _a([
+        asyncFn,
+        asyncFn,
+    ]);
+}
+function testSync () {
+    return _a([
+        syncFn,
+        syncFn,
+    ]);
+}
+function _a (args) {
+    return runTaskQueue([
+        () => args[0](),
+        (prev) => {
+            console.log('a', prev);
+            return args[1]();
+        },
+        (prev) => {
+            console.log('b', prev);
+            return 1;
+        },
+    ]);
+}
+```
+
 declaration
 
 ```ts
@@ -84,6 +127,15 @@ export declare function runTasks<T = any>(
     onSingleTaskDone?: (result: T, index: number) => void
 ): Promise<IResult<T>[]>;
 
+export declare function runTaskQueue<T = any>(
+    queue: ((prev: any, end: <T>(v?: T) => T) => any)[]
+): T | Promise<T>;
+export declare namespace runTaskQueue {
+	var end: (value: any) => {
+		[endMark]: boolean;
+		value: any;
+	};
+}
 
 export interface IAsyncResult<T> {
 	start: number;
