@@ -3,6 +3,7 @@ export interface IAsyncResult<T> {
     start: number,
     elapse: number,
     result: T,
+    success: boolean,
 }
 // 如果不支持，则模拟实现。兼容nodejs
 if (typeof globalThis.requestIdleCallback === 'undefined') {
@@ -27,8 +28,17 @@ if (typeof globalThis.requestIdleCallback === 'undefined') {
 
 export async function runAsyncTasks<T = any> (
     tasks: (()=>Promise<T>)[],
-    max = 10,
-    onSingleTaskDone?: (result: T, index: number)=>void,
+    {
+        max = 10,
+        retryTime = 2,
+        timeout = 10000,
+        onSingleTaskDone,
+    }: {
+        max?: number,
+        retryTime?: number,
+        timeout?: number,
+        onSingleTaskDone?: (data: {result: T, index: number, success: boolean})=>{abort?: boolean, data?: T}|void,
+    } = {}
 ): Promise<IAsyncResult<T>[]> {
     const length = tasks.length;
     if (length === 0) return Promise.resolve([]);
@@ -39,15 +49,56 @@ export async function runAsyncTasks<T = any> (
     let runIndex = 0;
     let finishCount = 0;
 
+    const runSingle = (task: (()=>Promise<any>)) => {
+        const {ready, resolve} = withResolve<{success: boolean, result: any}>();
+        const timer = setTimeout(() => {
+            resolve({success: false, result: null});
+        }, timeout);
+
+        let tryCount = 0;
+        const run = (fallback: any) => {
+            tryCount ++;
+            task().then((result) => {
+                clearTimeout(timer);
+                resolve({success: true, result});
+            }).catch(() => {
+                if (tryCount < retryTime) {
+                    run(fallback);
+                } else {
+                    fallback();
+                }
+            });
+        };
+        run(() => {
+            clearTimeout(timer);
+            resolve({success: false, result: null});
+        });
+        return ready;
+    };
+
     const runNextTask = async () => {
         const task = tasks[runIndex];
         const index = runIndex;
         runIndex ++;
         const start = Date.now();
-        const result = await task();
-        onSingleTaskDone?.(result, index);
+        const runResult = await runSingle(task);
+
+        const success = runResult.success;
+        let result = runResult.result;
+
+        const customResult = onSingleTaskDone?.({success, result, index});
+
+        if (customResult) {
+            const {abort, data} = customResult;
+            if (abort === false) {
+                resolve([]);
+                return;
+            }
+            if (data) result = data;
+        }
+
         const elapse = Date.now() - start;
-        results[index] = {start, result, elapse};
+        results[index] = {start, result, elapse, success};
         finishCount ++;
         if (finishCount === length) {
             resolve(results);
@@ -59,14 +110,15 @@ export async function runAsyncTasks<T = any> (
         runNextTask();
     };
 
-    for (let i = 0; i < max; i++) {
+    const n = Math.min(max, length);
+    for (let i = 0; i < n; i++) {
         runNextTask();
     }
 
     return ready;
 }
 
-export interface IResult<T> extends IAsyncResult<T> {
+export interface IResult<T> extends Omit<IAsyncResult<T>, 'success'> {
     round: number,
 }
 
@@ -173,4 +225,38 @@ export function withResolve<T=any> () {
         reject = _reject;
     });
     return {ready, resolve, reject};
+}
+
+// 对异步任务的执行做超时兜底
+export function runTaskBackup<Data = any> ({
+    task,
+    timeout,
+    time = 200,
+}: {
+    task: () => Promise<Data>,
+    timeout?: (() => Promise<Data>|Data)|Data,
+    time?: number,
+}) {
+    const {ready, resolve} = withResolve<Data>();
+    const timer = setTimeout(async () => {
+        let data: Data;
+        if (typeof timeout !== 'undefined') {
+            if (typeof timeout === 'function') {
+                // @ts-ignore
+                data = timeout();
+                if (data instanceof Promise) {
+                    data = await data;
+                }
+            } else {
+                data = timeout;
+            }
+        }
+        // @ts-ignore
+        resolve(data);
+    }, time);
+    task().then((data) => {
+        clearTimeout(timer);
+        resolve(data);
+    });
+    return ready;
 }
